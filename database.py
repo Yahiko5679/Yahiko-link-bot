@@ -140,7 +140,7 @@ class Database:
                 {"user_id": user_id},
                 {
                     "$set": user_data,
-                    "$setOnInsert": #{"joined_at": datetime.utcnow()}
+                    "$setOnInsert": datetime.utcnow()
                 },
                 upsert=True
             )
