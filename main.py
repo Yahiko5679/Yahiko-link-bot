@@ -66,6 +66,9 @@ class LinkVaultBot:
         
         # Initialize database
         await db.initialize()
+ 
+        # after self.app is created
+        handlers.register_handlers(self.app)
         
         # Start web server for Render
         await self.start_web_server()
