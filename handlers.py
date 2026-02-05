@@ -25,7 +25,7 @@ def get_uptime() -> str:
 
 # ==================== COMMAND HANDLERS ====================
 
-@Client.on_message(filters.command("start") & filters.private)
+@app.on_message(filters.command("start") & filters.private)
 async def start_command(client: Client, message: Message):
     """Handle /start command"""
     user = message.from_user
