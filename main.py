@@ -9,6 +9,8 @@ from pyrogram import Client, idle
 from config import Config
 from database import db
 import handlers  # Import to register handlers
+from aiohttp import web
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +36,24 @@ class LinkVaultBot:
             bot_token=Config.BOT_TOKEN,
             workers=4
         )
+        self.web_app = None
+    
+    async def health_check(self, request):
+        """Health check endpoint for Render"""
+        return web.Response(text="Bot is running!", status=200)
+    
+    async def start_web_server(self):
+        """Start a simple web server for Render (requires web service)"""
+        self.web_app = web.Application()
+        self.web_app.router.add_get('/', self.health_check)
+        self.web_app.router.add_get('/health', self.health_check)
+        
+        port = int(os.environ.get('PORT', 8080))
+        runner = web.AppRunner(self.web_app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', port)
+        await site.start()
+        logger.info(f"🌐 Web server started on port {port}")
     
     async def start_bot(self):
         """Start the bot"""
@@ -46,6 +66,9 @@ class LinkVaultBot:
         
         # Initialize database
         await db.initialize()
+        
+        # Start web server for Render
+        await self.start_web_server()
         
         # Start the bot
         await self.app.start()
