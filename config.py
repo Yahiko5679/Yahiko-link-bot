@@ -14,22 +14,22 @@ class Config:
     """Bot configuration settings"""
     
     # Telegram API Credentials
-    API_ID: int = int(os.environ.get("API_ID", "0"))
+    API_ID: int = int(os.environ.get("API_ID", ""))
     API_HASH: str = os.environ.get("API_HASH", "")
     BOT_TOKEN: str = os.environ.get("BOT_TOKEN", "")
     
     # Bot Administration
-    OWNER_ID: int = int(os.environ.get("OWNER_ID", "0"))
+    OWNER_ID: int = int(os.environ.get("OWNER_ID", ""))
     ADMIN_IDS: List[int] = [
         int(x) for x in os.environ.get("ADMIN_IDS", "").split() if x.strip()
     ]
     
     # Database Configuration
     DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
-    DATABASE_NAME: str = os.environ.get("DATABASE_NAME", "LinkVaultDB")
+    DATABASE_NAME: str = os.environ.get("DATABASE_NAME", "")
     
     # Storage Channel
-    STORAGE_CHANNEL_ID: int = int(os.environ.get("STORAGE_CHANNEL_ID", "0"))
+    STORAGE_CHANNEL_ID: int = int(os.environ.get("STORAGE_CHANNEL_ID", ""))
     
     # Bot Settings
     LINK_EXPIRY_MINUTES: int = int(os.environ.get("LINK_EXPIRY_MINUTES", "5"))
@@ -37,7 +37,7 @@ class Config:
     AUTO_APPROVE_ENABLED: bool = os.environ.get("AUTO_APPROVE", "False").lower() == "true"
     
     # Messages & UI
-    BOT_NAME: str = "LinkVault"
+    BOT_NAME: str = "Subaru Link"
     BOT_VERSION: str = "2.0"
     
     @classmethod
