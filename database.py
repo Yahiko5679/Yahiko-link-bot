@@ -38,8 +38,12 @@ class Database:
 
     # ==================== CHANNEL OPERATIONS ====================
 
-    async def add_channel(self, channel_id: int, channel_name: str, 
-                         invite_link: Optional[str] = None) -> bool:
+    async def add_channel(
+        self,
+        channel_id: int,
+        channel_name: str,
+        invite_link: Optional[str] = None
+    ) -> bool:
         """Add a new channel to database"""
         try:
             channel_data = {
@@ -64,7 +68,6 @@ class Database:
         try:
             result = await self.channels.delete_one({"channel_id": channel_id})
             if result.deleted_count > 0:
-                # Also remove associated links
                 await self.links.delete_many({"channel_id": channel_id})
                 logger.info(f"✅ Channel removed: {channel_id}")
                 return True
@@ -115,31 +118,36 @@ class Database:
 
     # ==================== USER OPERATIONS ====================
 
-    async def add_user(self, user_id: int, username: Optional[str] = None,
-                   first_name: Optional[str] = None) -> bool:
-    """Add or update user in database"""
-    try:
-        await self.users.update_one(
-            {"user_id": user_id},
-            {
-                "$set": {
-                    "username": username,
-                    "first_name": first_name,
-                    "last_active": datetime.utcnow(),
-                    "is_banned": False
+    async def add_user(
+        self,
+        user_id: int,
+        username: Optional[str] = None,
+        first_name: Optional[str] = None
+    ) -> bool:
+        """Add or update user in database"""
+        try:
+            user_data = {
+                "user_id": user_id,
+                "username": username,
+                "first_name": first_name,
+                "joined_at": datetime.utcnow(),
+                "last_active": datetime.utcnow(),
+                "total_requests": 0,
+                "is_banned": False
+            }
+
+            await self.users.update_one(
+                {"user_id": user_id},
+                {
+                    "$set": user_data,
+                    "$setOnInsert": {"joined_at": datetime.utcnow()}
                 },
-                "$setOnInsert": {
-                    "user_id": user_id,
-                    "joined_at": datetime.utcnow(),
-                    "total_requests": 0
-                }
-            },
-            upsert=True
-        )
-        return True
-    except Exception as e:
-        logger.error(f"❌ Failed to add user: {e}")
-        return False
+                upsert=True
+            )
+            return True
+        except Exception as e:
+            logger.error(f"❌ Failed to add user: {e}")
+            return False
 
     async def get_user(self, user_id: int) -> Optional[Dict]:
         """Get user information"""
@@ -149,7 +157,10 @@ class Database:
         """Update user's last active timestamp"""
         await self.users.update_one(
             {"user_id": user_id},
-            {"$set": {"last_active": datetime.utcnow()}, "$inc": {"total_requests": 1}}
+            {
+                "$set": {"last_active": datetime.utcnow()},
+                "$inc": {"total_requests": 1}
+            }
         )
 
     async def get_total_users(self) -> int:
@@ -159,7 +170,9 @@ class Database:
     async def get_active_users(self, days: int = 7) -> int:
         """Get count of recently active users"""
         cutoff_date = datetime.utcnow() - timedelta(days=days)
-        return await self.users.count_documents({"last_active": {"$gte": cutoff_date}})
+        return await self.users.count_documents(
+            {"last_active": {"$gte": cutoff_date}}
+        )
 
     async def ban_user(self, user_id: int, banned: bool = True) -> bool:
         """Ban or unban a user"""
@@ -175,16 +188,21 @@ class Database:
 
     # ==================== LINK OPERATIONS ====================
 
-    async def save_link(self, channel_id: int, invite_link: str, 
-                       link_type: str = "invite") -> bool:
+    async def save_link(
+        self,
+        channel_id: int,
+        invite_link: str,
+        link_type: str = "invite"
+    ) -> bool:
         """Save a generated invite link"""
         try:
             link_data = {
                 "channel_id": channel_id,
                 "invite_link": invite_link,
-                "link_type": link_type,  # 'invite' or 'request'
+                "link_type": link_type,
                 "created_at": datetime.utcnow(),
-                "expires_at": datetime.utcnow() + timedelta(minutes=Config.LINK_EXPIRY_MINUTES),
+                "expires_at": datetime.utcnow()
+                + timedelta(minutes=Config.LINK_EXPIRY_MINUTES),
                 "uses": 0,
                 "is_active": True
             }
@@ -197,11 +215,13 @@ class Database:
 
     async def get_active_link(self, channel_id: int) -> Optional[Dict]:
         """Get active invite link for a channel"""
-        return await self.links.find_one({
-            "channel_id": channel_id,
-            "is_active": True,
-            "expires_at": {"$gt": datetime.utcnow()}
-        })
+        return await self.links.find_one(
+            {
+                "channel_id": channel_id,
+                "is_active": True,
+                "expires_at": {"$gt": datetime.utcnow()}
+            }
+        )
 
     async def increment_link_uses(self, link: str):
         """Increment use counter for a link"""
@@ -213,11 +233,13 @@ class Database:
     async def cleanup_expired_links(self):
         """Remove expired links from database"""
         try:
-            result = await self.links.delete_many({
-                "expires_at": {"$lt": datetime.utcnow()}
-            })
+            result = await self.links.delete_many(
+                {"expires_at": {"$lt": datetime.utcnow()}}
+            )
             if result.deleted_count > 0:
-                logger.info(f"🗑️ Cleaned up {result.deleted_count} expired links")
+                logger.info(
+                    f"🗑️ Cleaned up {result.deleted_count} expired links"
+                )
         except Exception as e:
             logger.error(f"❌ Failed to cleanup links: {e}")
 
@@ -227,13 +249,16 @@ class Database:
         """Get bot statistics"""
         total_users = await self.get_total_users()
         active_users = await self.get_active_users(7)
-        total_channels = await self.channels.count_documents({"is_active": True})
-        active_links = await self.links.count_documents({
-            "is_active": True,
-            "expires_at": {"$gt": datetime.utcnow()}
-        })
+        total_channels = await self.channels.count_documents(
+            {"is_active": True}
+        )
+        active_links = await self.links.count_documents(
+            {
+                "is_active": True,
+                "expires_at": {"$gt": datetime.utcnow()}
+            }
+        )
 
-        # Calculate total joins
         pipeline = [
             {"$group": {"_id": None, "total": {"$sum": "$total_joins"}}}
         ]
