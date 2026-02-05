@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: linkvault-bot
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_NAME
+        value: LinkVaultDB
+      - key: STORAGE_CHANNEL_ID
+        sync: false
+      - key: LINK_EXPIRY_MINUTES
+        value: 5
+      - key: AUTO_APPROVE
+        value: False
+      - key: PYTHON_VERSION
+        value: 3.11.0
