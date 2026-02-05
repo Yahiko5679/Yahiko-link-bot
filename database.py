@@ -130,7 +130,7 @@ class Database:
                 "user_id": user_id,
                 "username": username,
                 "first_name": first_name,
-                "joined_at": datetime.utcnow(),
+               # "joined_at": datetime.utcnow(),
                 "last_active": datetime.utcnow(),
                 "total_requests": 0,
                 "is_banned": False
