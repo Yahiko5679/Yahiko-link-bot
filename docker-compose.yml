@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  linkvault-bot:
+    build: .
+    container_name: linkvault-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./LinkVaultBot.session:/app/LinkVaultBot.session
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - linkvault-network
+
+networks:
+  linkvault-network:
+    driver: bridge
