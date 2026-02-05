@@ -25,24 +25,20 @@ def get_uptime() -> str:
 
 # ==================== COMMAND HANDLERS ====================
 
-@app.on_message(filters.command("start") & filters.private)
-async def start_command(client: Client, message: Message):
-    """Handle /start command"""
-    user = message.from_user
-    
-    # Add user to database
-    await db.add_user(user.id, user.username, user.first_name)
-    await db.update_last_active(user.id)
-    
-    is_admin = Config.is_admin(user.id)
-    
-    welcome_text = Formatter.welcome_message(user.first_name or "User", is_admin)
-    
-    await message.reply_text(
-        welcome_text,
-        reply_markup=UI.start_menu(is_admin)
-    )
+    @app.on_message(filters.command("start") & filters.private)
+    async def start_command(client, message: Message):
+        user = message.from_user
 
+        await db.add_user(user.id, user.username, user.first_name)
+        await db.update_last_active(user.id)
+
+        is_admin = Config.is_admin(user.id)
+        welcome_text = Formatter.welcome_message(user.first_name or "User", is_admin)
+
+        await message.reply_text(
+            welcome_text,
+            reply_markup=UI.start_menu(is_admin)
+        )
 
 @Client.on_message(filters.command("help") & filters.private)
 async def help_command(client: Client, message: Message):
