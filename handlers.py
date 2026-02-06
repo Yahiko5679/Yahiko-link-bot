@@ -244,6 +244,93 @@ def register_handlers(app: Client):
             )
         )
 
+    # ==================== ADMIN: REFRESH CHANNEL ====================
+
+    @app.on_message(filters.command("refreshchannel") & filters.private)
+    async def refresh_channel_command(client: Client, message: Message):
+        if not Config.is_admin(message.from_user.id):
+            await message.reply_text(Formatter.error_message("Access denied."))
+            return
+
+        parts = message.text.split(maxsplit=1)
+        if len(parts) < 2:
+            await message.reply_text(
+                f"{Colors.ERROR} **Usage:**\n\n"
+                f"/refreshchannel <channel_id>\n\n"
+                f"This fixes PEER_ID_INVALID errors"
+            )
+            return
+
+        try:
+            channel_id = int(parts[1].strip())
+        except ValueError:
+            await message.reply_text(Formatter.error_message("Invalid channel ID."))
+            return
+
+        status_msg = await message.reply_text(f"{Colors.INFO} Refreshing channel...")
+
+        try:
+            # Get chat to refresh peer info
+            chat = await client.get_chat(channel_id)
+            
+            await status_msg.edit_text(
+                Formatter.success_message(
+                    f"Channel refreshed!\n\n"
+                    f"📢 **Name:** {chat.title}\n"
+                    f"🆔 **ID:** `{channel_id}`\n\n"
+                    f"{Colors.SUCCESS} PEER_ID_INVALID error should be fixed now."
+                )
+            )
+        except Exception as e:
+            logger.error(f"Error refreshing channel: {e}")
+            await status_msg.edit_text(
+                Formatter.error_message(
+                    f"Failed to refresh channel.\n\n"
+                    f"Make sure:\n"
+                    f"• Bot is admin in the channel\n"
+                    f"• Channel ID is correct\n\n"
+                    f"Error: {str(e)}"
+                )
+            )
+
+    # ==================== ADMIN: REFRESH ALL CHANNELS ====================
+
+    @app.on_message(filters.command("refreshall") & filters.private)
+    async def refresh_all_command(client: Client, message: Message):
+        if not Config.is_admin(message.from_user.id):
+            await message.reply_text(Formatter.error_message("Access denied."))
+            return
+
+        status_msg = await message.reply_text(f"{Colors.INFO} Refreshing all channels...")
+
+        channels = await db.get_all_channels()
+        
+        refreshed = 0
+        failed = 0
+        failed_channels = []
+
+        for channel in channels:
+            try:
+                channel_id = channel.get("channel_id")
+                chat = await client.get_chat(channel_id)
+                refreshed += 1
+            except Exception as e:
+                failed += 1
+                failed_channels.append(f"`{channel.get('channel_id')}` - {channel.get('channel_name', 'Unknown')}")
+
+        result_text = (
+            f"{Colors.SUCCESS} **Refresh Complete!**\n\n"
+            f"✅ **Success:** {refreshed}\n"
+            f"❌ **Failed:** {failed}\n"
+        )
+        
+        if failed_channels:
+            result_text += f"\n**Failed Channels:**\n" + "\n".join(failed_channels[:5])
+            if len(failed_channels) > 5:
+                result_text += f"\n_...and {len(failed_channels) - 5} more_"
+
+        await status_msg.edit_text(result_text)
+
     # ==================== CALLBACK HANDLER ====================
 
     @app.on_callback_query()
@@ -370,6 +457,12 @@ async def handle_deep_link(client: Client, message: Message, payload: str):
 
         # Generate temporary invite link
         try:
+            # Try to refresh channel first to avoid PEER_ID_INVALID
+            try:
+                await client.get_chat(channel_id)
+            except Exception as refresh_error:
+                logger.warning(f"⚠️ Channel refresh failed: {refresh_error}")
+            
             if is_request_link:
                 # Create request link (join with approval)
                 invite = await client.create_chat_invite_link(
@@ -421,16 +514,34 @@ async def handle_deep_link(client: Client, message: Message, payload: str):
 
         except Exception as e:
             logger.error(f"Error generating invite link: {e}")
-            await status_msg.edit_text(
-                Formatter.error_message(
-                    f"Failed to generate invite link.\n\n"
-                    f"**Possible reasons:**\n"
-                    f"• Bot is not admin in the channel\n"
-                    f"• Bot lacks 'Create Invite Links' permission\n"
-                    f"• Channel settings restrict invites\n\n"
-                    f"Please contact the bot owner."
+            
+            # Check if it's a PEER_ID_INVALID error
+            error_text = str(e).lower()
+            if "peer id invalid" in error_text or "peer_id_invalid" in error_text:
+                await status_msg.edit_text(
+                    f"{Colors.ERROR} **Channel Connection Lost**\n\n"
+                    f"The bot lost connection to this channel.\n\n"
+                    f"**Quick Fix:**\n"
+                    f"1. Make sure bot is still admin in the channel\n"
+                    f"2. Admin: Send `/refreshchannel {channel_id}` to reconnect\n"
+                    f"3. Or remove and re-add the channel\n\n"
+                    f"**This usually happens after:**\n"
+                    f"• Bot restart\n"
+                    f"• Channel was removed/re-added\n"
+                    f"• Bot was removed as admin temporarily\n\n"
+                    f"{Colors.INFO} _Contact admin for help_"
                 )
-            )
+            else:
+                await status_msg.edit_text(
+                    Formatter.error_message(
+                        f"Failed to generate invite link.\n\n"
+                        f"**Possible reasons:**\n"
+                        f"• Bot is not admin in the channel\n"
+                        f"• Bot lacks 'Create Invite Links' permission\n"
+                        f"• Channel settings restrict invites\n\n"
+                        f"Please contact the bot owner."
+                    )
+                )
 
     except Exception as e:
         logger.error(f"Error in handle_deep_link: {e}", exc_info=True)
