@@ -66,8 +66,8 @@ class LinkVaultBot:
         
         # Initialize database
         await db.initialize()
- 
-        # after self.app is created
+
+       # registration handlers
         handlers.register_handlers(self.app)
         
         # Start web server for Render
@@ -77,6 +77,10 @@ class LinkVaultBot:
         await self.app.start()
         
         me = await self.app.get_me()
+        
+        # Save bot username to config
+        Config.BOT_USERNAME = me.username
+        
         logger.info(f"✅ Bot started successfully as @{me.username}")
         logger.info(f"📊 Bot ID: {me.id}")
         logger.info(f"👑 Owner ID: {Config.OWNER_ID}")
