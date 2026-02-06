@@ -4,7 +4,7 @@ Handles all user interactions and commands
 """
 
 from pyrogram import filters
-from pyrogram.types import Message, CallbackQuery
+from pyrogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram import Client
 from database import db
 from config import Config, Colors
@@ -365,7 +365,7 @@ async def handle_deep_link(client: Client, message: Message, payload: str):
         # Send "Generating link..." message
         status_msg = await message.reply_text(
             f"{Colors.INFO} **Generating your invite link...**\n\n"
-            f"Please wait a moment..."
+            f"Please wait..."
         )
 
         # Generate temporary invite link
@@ -391,25 +391,32 @@ async def handle_deep_link(client: Client, message: Message, payload: str):
             await db.save_link(channel_id, invite_link, "request" if is_request_link else "invite")
             await db.increment_channel_joins(channel_id)
 
-            # Send the invite link
+            # Send the invite link with button
             link_type_text = "Request Link" if is_request_link else "Invite Link"
+            
+            # Create inline button with the invite link
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton(
+                    "🚀 Join Channel",
+                    url=invite_link
+                )]
+            ])
 
             await status_msg.edit_text(
                 f"{Colors.SUCCESS} **{link_type_text} Generated!**\n\n"
-                f"📢 **Channel:** {channel.get('channel_name', 'Unknown')}\n"
-                f"🔗 **Link:** `{invite_link}`\n\n"
-                f"{Colors.TIME} **Important:**\n"
-                f"• This link will be revoked in **{Config.TEMP_LINK_REVOKE_SECONDS} seconds**\n"
-                f"• Use it immediately!\n"
-                f"• After revoke, request a new link\n\n"
-                f"{Colors.INFO} _Click the link above to join the channel_"
+                f"📢 **Channel:** {channel.get('channel_name', 'Unknown')}\n\n"
+                f"{Colors.TIME} **⚡ Link expires in {Config.TEMP_LINK_REVOKE_SECONDS} seconds!**\n"
+                f"• Click button below NOW!\n"
+                f"• Don't share with others\n\n"
+                f"{Colors.INFO} _Tap the button to join_ ⬇️",
+                reply_markup=keyboard
             )
 
             logger.info(f"Invite link generated for channel {channel_id}, will revoke in {Config.TEMP_LINK_REVOKE_SECONDS}s")
 
-            # Auto-revoke after specified seconds
+            # Auto-revoke and delete message after specified seconds
             asyncio.create_task(
-                auto_revoke_link(client, channel_id, invite_link, Config.TEMP_LINK_REVOKE_SECONDS)
+                auto_revoke_and_delete(client, channel_id, invite_link, status_msg, Config.TEMP_LINK_REVOKE_SECONDS)
             )
 
         except Exception as e:
@@ -432,19 +439,29 @@ async def handle_deep_link(client: Client, message: Message, payload: str):
         )
 
 
-async def auto_revoke_link(client: Client, channel_id: int, invite_link: str, delay_seconds: int):
-    """Automatically revoke invite link after delay"""
+async def auto_revoke_and_delete(client: Client, channel_id: int, invite_link: str, 
+                                 message: Message, delay_seconds: int):
+    """Automatically revoke invite link and delete message after delay"""
     try:
         # Wait for specified seconds
         await asyncio.sleep(delay_seconds)
 
         # Revoke the link
-        await client.revoke_chat_invite_link(channel_id, invite_link)
+        try:
+            await client.revoke_chat_invite_link(channel_id, invite_link)
+            logger.info(f"✅ Auto-revoked invite link for channel {channel_id}")
+        except Exception as revoke_error:
+            logger.error(f"❌ Failed to revoke link: {revoke_error}")
 
-        logger.info(f"Auto-revoked invite link for channel {channel_id} after {delay_seconds}s")
+        # Delete the message
+        try:
+            await message.delete()
+            logger.info(f"🗑️ Deleted message after {delay_seconds}s")
+        except Exception as delete_error:
+            logger.error(f"❌ Failed to delete message: {delete_error}")
 
     except Exception as e:
-        logger.error(f"Error auto-revoking link: {e}")
+        logger.error(f"Error in auto_revoke_and_delete: {e}")
 
 
 async def generate_invite_link(client: Client, callback: CallbackQuery, 
