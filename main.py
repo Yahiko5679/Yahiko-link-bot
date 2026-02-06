@@ -8,7 +8,7 @@ import logging
 from pyrogram import Client, idle
 from config import Config
 from database import db
-import handlers  # Import to register handlers
+from handlers import register_handlers  # Import the register function
 from aiohttp import web
 import os
 
@@ -37,10 +37,13 @@ class LinkVaultBot:
             workers=4
         )
         self.web_app = None
+        
+        # Register all handlers
+        register_handlers(self.app)
     
     async def health_check(self, request):
         """Health check endpoint for Render"""
-        return web.Response(text="Bot is running!", status=200)
+        return web.Response(text="Link Bot CosmicBotz!", status=200)
     
     async def start_web_server(self):
         """Start a simple web server for Render (requires web service)"""
@@ -66,9 +69,6 @@ class LinkVaultBot:
         
         # Initialize database
         await db.initialize()
-
-       # registration handlers
-        handlers.register_handlers(self.app)
         
         # Start web server for Render
         await self.start_web_server()
