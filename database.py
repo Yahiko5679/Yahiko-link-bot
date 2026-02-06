@@ -124,7 +124,6 @@ class Database:
                 "user_id": user_id,
                 "username": username,
                 "first_name": first_name,
-                "joined_at": datetime.utcnow(),
                 "last_active": datetime.utcnow(),
                 "total_requests": 0,
                 "is_banned": False
@@ -132,7 +131,10 @@ class Database:
             
             await self.users.update_one(
                 {"user_id": user_id},
-                {"$set": user_data, "$setOnInsert": {"joined_at": datetime.utcnow()}},
+                {
+                    "$set": user_data, 
+                    "$setOnInsert": {"joined_at": datetime.utcnow()}
+                },
                 upsert=True
             )
             return True
