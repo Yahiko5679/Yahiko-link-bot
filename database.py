@@ -233,13 +233,14 @@ class Database:
         )
     
     async def cleanup_expired_links(self):
-        """Remove expired links from database"""
+        """Remove expired TEMPORARY links from database (NOT channel permanent links)"""
         try:
+            # Only delete links from the 'links' collection, NOT from 'channels' collection
             result = await self.links.delete_many({
                 "expires_at": {"$lt": datetime.utcnow()}
             })
             if result.deleted_count > 0:
-                logger.info(f"🗑️ Cleaned up {result.deleted_count} expired links")
+                logger.info(f"🗑️ Cleaned up {result.deleted_count} expired temporary links")
         except Exception as e:
             logger.error(f"❌ Failed to cleanup links: {e}")
     
