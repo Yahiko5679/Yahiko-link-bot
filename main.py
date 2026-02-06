@@ -43,7 +43,7 @@ class LinkVaultBot:
     
     async def health_check(self, request):
         """Health check endpoint for Render"""
-        return web.Response(text="Link Bot CosmicBotz!", status=200)
+        return web.Response(text="Bot is running!", status=200)
     
     async def start_web_server(self):
         """Start a simple web server for Render (requires web service)"""
@@ -86,11 +86,39 @@ class LinkVaultBot:
         logger.info(f"👑 Owner ID: {Config.OWNER_ID}")
         logger.info(f"🔧 Version: {Config.BOT_VERSION}")
         
+        # Refresh all channels (fix PEER_ID_INVALID on restart)
+        await self.refresh_channels()
+        
         # Start cleanup task
         asyncio.create_task(self.cleanup_task())
         
         # Keep bot running
         await idle()
+    
+    async def refresh_channels(self):
+        """Refresh all channels to avoid PEER_ID_INVALID errors"""
+        try:
+            logger.info("🔄 Refreshing all channels...")
+            channels = await db.get_all_channels()
+            
+            refreshed = 0
+            failed = 0
+            
+            for channel in channels:
+                try:
+                    channel_id = channel.get("channel_id")
+                    # Get chat to refresh peer info
+                    chat = await self.app.get_chat(channel_id)
+                    refreshed += 1
+                    logger.info(f"✅ Refreshed: {chat.title} ({channel_id})")
+                except Exception as e:
+                    failed += 1
+                    logger.warning(f"⚠️ Failed to refresh channel {channel.get('channel_id')}: {e}")
+            
+            logger.info(f"🔄 Channel refresh complete: {refreshed} success, {failed} failed")
+            
+        except Exception as e:
+            logger.error(f"❌ Error refreshing channels: {e}")
     
     async def cleanup_task(self):
         """Periodic cleanup of expired links"""
