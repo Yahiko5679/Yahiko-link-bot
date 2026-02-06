@@ -33,12 +33,14 @@ class Config:
     
     # Bot Settings
     LINK_EXPIRY_MINUTES: int = int(os.environ.get("LINK_EXPIRY_MINUTES", "5"))
+    TEMP_LINK_REVOKE_SECONDS: int = int(os.environ.get("TEMP_LINK_REVOKE_SECONDS", "10"))
     MAX_CHANNELS_PER_PAGE: int = 8
     AUTO_APPROVE_ENABLED: bool = os.environ.get("AUTO_APPROVE", "False").lower() == "true"
+    BOT_USERNAME: str = os.environ.get("BOT_USERNAME", "")
     
     # Messages & UI
     BOT_NAME: str = "Subaru Link"
-    BOT_VERSION: str = "2.0"
+    BOT_VERSION: str = "2.7"
     
     @classmethod
     def validate(cls) -> bool:
