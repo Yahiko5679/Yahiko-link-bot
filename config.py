@@ -32,7 +32,7 @@ class Config:
     STORAGE_CHANNEL_ID: int = int(os.environ.get("STORAGE_CHANNEL_ID", ""))
     
     # Bot Settings
-    LINK_EXPIRY_MINUTES: int = int(os.environ.get("LINK_EXPIRY_MINUTES", "5"))
+    LINK_EXPIRY_MINUTES: int = int(os.environ.get("LINK_EXPIRY_MINUTES", "0"))
     TEMP_LINK_REVOKE_SECONDS: int = int(os.environ.get("TEMP_LINK_REVOKE_SECONDS", "10"))
     MAX_CHANNELS_PER_PAGE: int = 8
     AUTO_APPROVE_ENABLED: bool = os.environ.get("AUTO_APPROVE", "False").lower() == "true"
